@@ -1,0 +1,83 @@
+#!/bin/bash
+
+%{ if enabled ~}
+# For Docker, "latest" means the latest stable version from the repository
+if [ "${version}" = "latest" ]; then
+    echo "=== Installing Docker (latest stable) ==="
+else
+    echo "=== Installing Docker (version ${version}) ==="
+fi
+
+# Set up Docker repository
+echo "Setting up Docker repository..."
+install -m 0755 -d /etc/apt/keyrings || {
+    echo "Failed to create keyrings directory"
+    exit 1
+}
+
+echo "Downloading Docker GPG key..."
+if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc; then
+    echo "Failed to download Docker GPG key"
+    exit 1
+fi
+
+chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "Adding Docker repository..."
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker
+echo "Updating package lists..."
+if ! apt-get update -y; then
+    echo "Failed to update package lists"
+    exit 1
+fi
+
+echo "Installing Docker packages..."
+if [ "${version}" = "latest" ]; then
+    # Install latest stable version
+    if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+        echo "Failed to install Docker packages"
+        exit 1
+    fi
+else
+    # Install specific version
+    DOCKER_VERSION=$(apt-cache madison docker-ce | grep "${version}" | head -1 | awk '{print $3}')
+    if [ -z "$DOCKER_VERSION" ]; then
+        echo "Docker version ${version} not found, installing latest"
+        if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+            echo "Failed to install Docker packages"
+            exit 1
+        fi
+    else
+        echo "Installing Docker version $DOCKER_VERSION"
+        if ! apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io docker-buildx-plugin docker-compose-plugin; then
+            echo "Failed to install Docker packages"
+            exit 1
+        fi
+    fi
+fi
+
+# Configure Docker
+echo "Adding user ${username} to docker group..."
+if ! usermod -aG docker ${username}; then
+    echo "Failed to add user to docker group"
+    exit 1
+fi
+
+echo "Starting Docker service..."
+if ! systemctl start docker; then
+    echo "Failed to start Docker service"
+    exit 1
+fi
+
+echo "Enabling Docker service..."
+if ! systemctl enable docker; then
+    echo "Failed to enable Docker service"
+    exit 1
+fi
+
+echo "=== Docker installation completed successfully ==="
+%{ else ~}
+echo "=== Docker installation skipped (disabled) ==="
+%{ endif ~}

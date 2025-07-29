@@ -1,0 +1,29 @@
+# Proxmox connection settings
+proxmox_url: "https://your-proxmox-server:8006/api2/json"
+proxmox_api_insecure: true
+proxmox_api_auth_method: "token" # or "username_password"
+
+# Uncomment and fill in the appropriate authentication method
+# For username/password authentication:
+# proxmox_api_username: "root@pam"
+# proxmox_api_password: "your_password"
+
+# For token authentication:
+proxmox_api_token_id: "your-user@pam!your-token-name"
+proxmox_api_token_secret: "your_token_secret_here"
+
+# VM/Container configuration
+proxmox_default_vm_target_node: "pve01"
+proxmox_use_lxc: true
+proxmox_template_storage: "local:vztmpl"
+proxmox_template_name: "coder-workspace_24.04.tar.gz"
+
+# Resource allocation
+container_disk_size: 10    # GB (5-100)
+container_cpu_cores: 2     # cores (1-8)
+container_memory: 2048     # MB (1024, 2048, 3072, 4096, or 6144)
+
+# User configuration
+git_committer_email: "coder@coder.com"
+container_ssh_username: "coder"
+container_ssh_password: "coder"

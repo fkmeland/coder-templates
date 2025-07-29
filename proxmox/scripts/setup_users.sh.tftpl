@@ -1,0 +1,28 @@
+#!/bin/bash
+
+echo "=== Starting user setup ==="
+
+# Create user and setup sudo
+echo "Setting up user ${username}..."
+if ! id "${username}" &>/dev/null; then
+    adduser ${username} --disabled-password --gecos '' || {
+        echo "Failed to create user ${username}"
+        exit 1
+    }
+    
+    adduser ${username} sudo || {
+        echo "Failed to add user to sudo group"
+        exit 1
+    }
+    
+    echo '${username} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers || {
+        echo "Failed to configure sudo access"
+        exit 1
+    }
+    
+    echo "User ${username} created and configured successfully"
+else
+    echo "User ${username} already exists, skipping user creation"
+fi
+
+echo "=== User setup completed successfully ===" 

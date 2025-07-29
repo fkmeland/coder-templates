@@ -1,0 +1,42 @@
+#!/bin/bash
+
+%{ if enabled ~}
+# For Nix, "latest" means the latest stable version from the official installer
+if [ "${version}" = "latest" ]; then
+    echo "=== Installing Nix (latest stable) ==="
+    # Install Nix
+    echo "Downloading and installing Nix..."
+    if ! curl -L https://nixos.org/nix/install | sh -s -- --daemon; then
+        echo "Failed to install Nix"
+        exit 1
+    fi
+else
+    echo "=== Installing Nix (version ${version}) ==="
+    # Install specific version (if available)
+    echo "Downloading and installing Nix ${version}..."
+    if ! curl -L https://releases.nixos.org/nix/nix-${version}/install | sh -s -- --daemon; then
+        echo "Failed to install Nix ${version}, falling back to latest"
+        if ! curl -L https://nixos.org/nix/install | sh -s -- --daemon; then
+            echo "Failed to install Nix"
+            exit 1
+        fi
+    fi
+fi
+
+# Configure Nix
+echo "Configuring Nix..."
+mkdir -p /etc/nix || {
+    echo "Failed to create Nix config directory"
+    exit 1
+}
+
+echo "Enabling experimental features..."
+echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf || {
+    echo "Failed to configure Nix features"
+    exit 1
+}
+
+echo "=== Nix installation completed successfully ==="
+%{ else ~}
+echo "=== Nix installation skipped (disabled) ==="
+%{ endif ~}

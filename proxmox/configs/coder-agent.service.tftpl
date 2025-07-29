@@ -1,0 +1,16 @@
+[Unit]
+Description=coder-agent
+After=network.target
+
+[Service]
+Type=simple
+User=${username}
+WorkingDirectory=/home/${username}
+Environment=CODER_AGENT_TOKEN=${coder_agent_token}
+Environment=CODER_AGENT_URL=${coder_agent_url}
+ExecStart=/usr/local/bin/coder agent
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

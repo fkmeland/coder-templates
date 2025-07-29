@@ -1,0 +1,58 @@
+#!/bin/bash
+
+%{ if enabled ~}
+# Always use latest NVM version (simplified approach)
+echo "=== Detecting latest NVM version ==="
+ACTUAL_NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+if [ -z "$ACTUAL_NVM_VERSION" ]; then
+    echo "Failed to detect latest NVM version, falling back to 0.40.1"
+    ACTUAL_NVM_VERSION="0.40.1"
+fi
+echo "Latest NVM version detected: $ACTUAL_NVM_VERSION"
+
+# Determine the actual Node.js version to install
+if [ "${node_version}" = "latest" ]; then
+    echo "=== Detecting latest Node.js LTS version ==="
+    ACTUAL_NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | grep -o '"version":"v[^"]*"' | head -1 | sed 's/"version":"v//' | sed 's/"//')
+    if [ -z "$ACTUAL_NODE_VERSION" ]; then
+        echo "Failed to detect latest Node.js version, falling back to 22.14.0"
+        ACTUAL_NODE_VERSION="22.14.0"
+    fi
+    echo "Latest Node.js version detected: $ACTUAL_NODE_VERSION"
+else
+    ACTUAL_NODE_VERSION="${node_version}"
+fi
+
+echo "=== Installing NVM [$ACTUAL_NVM_VERSION] and Node.js [$ACTUAL_NODE_VERSION] ==="
+
+# Install NVM
+echo "Installing NVM $ACTUAL_NVM_VERSION for user ${username}..."
+if ! su - ${username} -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$ACTUAL_NVM_VERSION/install.sh | bash"; then
+    echo "Failed to install NVM $ACTUAL_NVM_VERSION"
+    exit 1
+fi
+
+# NVM install does this for us
+#echo "Configuring NVM environment..."
+#echo 'export NVM_DIR="$HOME/.nvm"' >> /home/${username}/.bashrc
+#echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /home/${username}/.bashrc
+#echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /home/${username}/.bashrc
+
+# Install Node.js specific version
+echo "Installing Node.js $ACTUAL_NODE_VERSION..."
+if ! su - ${username} -c "source \$HOME/.nvm/nvm.sh && nvm install $ACTUAL_NODE_VERSION"; then
+    echo "Failed to install Node.js $ACTUAL_NODE_VERSION"
+    exit 1
+fi
+
+# Set as default version
+echo "Setting Node.js $ACTUAL_NODE_VERSION as default..."
+if ! su - ${username} -c "source \$HOME/.nvm/nvm.sh && nvm alias default $ACTUAL_NODE_VERSION"; then
+    echo "Failed to set Node.js $ACTUAL_NODE_VERSION as default"
+    exit 1
+fi
+
+echo "=== NVM [$ACTUAL_NVM_VERSION] and Node.js [$ACTUAL_NODE_VERSION] setup completed successfully ==="
+%{ else ~}
+echo "=== Node.js/NVM installation skipped (disabled) ==="
+%{ endif ~}

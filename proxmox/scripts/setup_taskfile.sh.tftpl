@@ -1,0 +1,48 @@
+#!/bin/bash
+
+%{ if enabled ~}
+# Determine the actual version to install
+if [ "${version}" = "latest" ]; then
+    echo "=== Detecting latest Taskfile version ==="
+    ACTUAL_VERSION=$(curl -s https://api.github.com/repos/go-task/task/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+    if [ -z "$ACTUAL_VERSION" ]; then
+        echo "Failed to detect latest Taskfile version, falling back to 3.41.0"
+        ACTUAL_VERSION="3.41.0"
+    fi
+    echo "Latest Taskfile version detected: $ACTUAL_VERSION"
+else
+    ACTUAL_VERSION="${version}"
+fi
+
+echo "=== Installing Taskfile $ACTUAL_VERSION ==="
+
+# Install Task
+echo "Installing Task..."
+if ! sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -b /usr/local/bin v$ACTUAL_VERSION; then
+    echo "Failed to install Task"
+    exit 1
+fi
+
+# Verify installation
+if [ -f "/usr/local/bin/task" ]; then
+    echo "Task binary installed successfully at /usr/local/bin/task"
+    /usr/local/bin/task --version
+else
+    echo "Task binary not found at /usr/local/bin/task, checking current directory..."
+    if [ -f "./bin/task" ]; then
+        echo "Found Task in ./bin/task, moving to /usr/local/bin/"
+        mkdir -p /usr/local/bin
+        mv ./bin/task /usr/local/bin/task
+        chmod +x /usr/local/bin/task
+        echo "Task binary moved to /usr/local/bin/task"
+        /usr/local/bin/task --version
+    else
+        echo "Task binary not found anywhere"
+        exit 1
+    fi
+fi
+
+echo "=== Taskfile $ACTUAL_VERSION installation completed successfully ==="
+%{ else ~}
+echo "=== Taskfile installation skipped (disabled) ==="
+%{ endif ~}

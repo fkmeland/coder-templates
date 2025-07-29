@@ -1,0 +1,53 @@
+#!/bin/bash
+
+%{ if enabled ~}
+# Determine the actual version to install
+if [ "${version}" = "latest" ]; then
+    echo "=== Detecting latest Go version ==="
+    # Try the official Go API with better parsing
+    ACTUAL_VERSION=$(curl -s https://go.dev/VERSION?m=text | head -1 | sed 's/go//' | sed 's/[[:space:]].*//' | tr -d '\n\r')
+
+    # If that fails, try parsing the Go download page
+    if [ -z "$ACTUAL_VERSION" ] || [[ "$ACTUAL_VERSION" == *"time"* ]] || [[ "$ACTUAL_VERSION" == *"<"* ]]; then
+        echo "Go API failed, trying download page..."
+        ACTUAL_VERSION=$(curl -s https://go.dev/dl/ | grep -o 'go[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed 's/go//')
+    fi
+
+    # Final fallback
+    if [ -z "$ACTUAL_VERSION" ] || [[ "$ACTUAL_VERSION" == *"time"* ]] || [[ "$ACTUAL_VERSION" == *"<"* ]]; then
+        echo "Failed to detect latest Go version, falling back to 1.24.5"
+        ACTUAL_VERSION="1.24.5"
+    fi
+    echo "Latest Go version detected: $ACTUAL_VERSION"
+else
+    ACTUAL_VERSION="${version}"
+fi
+
+echo "=== Installing Golang $ACTUAL_VERSION ==="
+
+# Install Golang
+echo "Downloading Go..."
+if ! wget "https://go.dev/dl/go$ACTUAL_VERSION.linux-amd64.tar.gz"; then
+    echo "Failed to download Go"
+    exit 1
+fi
+
+echo "Installing Go..."
+if ! tar -C /usr/local -xzf "go$ACTUAL_VERSION.linux-amd64.tar.gz"; then
+    echo "Failed to extract Go"
+    exit 1
+fi
+
+echo "Configuring Go environment..."
+echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile || {
+    echo "Failed to update PATH"
+    exit 1
+}
+
+echo "Cleaning up Go installer..."
+rm "go$ACTUAL_VERSION.linux-amd64.tar.gz"
+
+echo "=== Golang $ACTUAL_VERSION installation completed successfully ==="
+%{ else ~}
+echo "=== Golang installation skipped (disabled) ==="
+%{ endif ~}

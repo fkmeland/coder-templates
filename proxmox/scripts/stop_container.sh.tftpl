@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+echo "=== Running container stop script ==="
+echo "URL: ${proxmox_url}"
+echo "Node: ${node}"
+echo "Container ID: ${container_id}"
+echo "---"
+
+curl -s -k -X POST \
+  -H "Authorization: PVEAPIToken=${token_id}=${token_secret}" \
+  "${proxmox_url}/nodes/${node}/lxc/${container_id}/status/shutdown" 

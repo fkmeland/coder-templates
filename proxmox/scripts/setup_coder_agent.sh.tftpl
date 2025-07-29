@@ -1,0 +1,31 @@
+#!/bin/bash
+
+echo "=== Installing Coder agent ==="
+
+# Create directory if it doesn't exist
+if [ ! -d /usr/local/bin ]; then
+    echo "Creating /usr/local/bin directory..."
+    if ! mkdir -p /usr/local/bin; then
+        echo "Failed to create /usr/local/bin directory"
+        exit 1
+    fi
+fi
+
+# Check if agent needs to be installed or updated
+if [ ! -f /usr/local/bin/coder ] || ! /usr/local/bin/coder version 2>/dev/null | grep -q '${coder_agent_url}'; then
+    echo "Downloading Coder agent..."
+    if ! curl -fsSL --retry 3 --retry-delay 1 '${coder_agent_url}/bin/coder-linux-amd64' -o /usr/local/bin/coder; then
+        echo "Failed to download Coder agent"
+        exit 1
+    fi
+
+    echo "Setting executable permissions..."
+    if ! chmod +x /usr/local/bin/coder; then
+        echo "Failed to set executable permissions on Coder agent"
+        exit 1
+    fi
+else
+    echo "Coder agent already installed and up to date"
+fi
+
+echo "=== Coder agent installation completed successfully ==="

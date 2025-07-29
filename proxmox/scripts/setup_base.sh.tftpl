@@ -1,0 +1,27 @@
+#!/bin/bash
+
+echo "=== Starting base system setup ==="
+
+# Create coder config directory
+echo "Creating coder config directory..."
+mkdir -p /etc/coder || {
+    echo "Failed to create /etc/coder directory"
+    exit 1
+}
+
+# Update package list
+echo "Updating package lists..."
+if ! DEBIAN_FRONTEND=noninteractive apt-get update -y; then
+    echo "Failed to update package lists"
+    exit 1
+fi
+
+# Install required packages
+echo "Installing base packages..."
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl wget git build-essential make ca-certificates; then
+    echo "Failed to install base packages"
+    exit 1
+fi
+
+echo "=== Base system setup completed successfully ===" 

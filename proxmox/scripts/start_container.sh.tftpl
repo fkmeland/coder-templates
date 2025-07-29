@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+echo "=== Running container start script ==="
+echo "URL: ${proxmox_url}"
+echo "Node: ${node}"
+echo "Container ID: ${container_id}"
+echo "---"
+
+# Get initial status
+initial_status=$(curl -s -k \
+  -H "Authorization: PVEAPIToken=${token_id}=${token_secret}" \
+  "${proxmox_url}/nodes/${node}/lxc/${container_id}/status/current")
+echo "Initial container status: $initial_status"
+
+# Try to start the container
+echo "Sending start command..."
+start_response=$(curl -s -k -X POST \
+  -H "Authorization: PVEAPIToken=${token_id}=${token_secret}" \
+  "${proxmox_url}/nodes/${node}/lxc/${container_id}/status/start")
+echo "Start command response: $start_response"
+
+# Wait for container to be running
+echo "Waiting for container to start..."
+for i in {1..12}; do
+  status_response=$(curl -s -k \
+    -H "Authorization: PVEAPIToken=${token_id}=${token_secret}" \
+    "${proxmox_url}/nodes/${node}/lxc/${container_id}/status/current")
+  echo "Status response: $status_response"
+  
+  status=$(echo "$status_response" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+  echo "Parsed status: $status"
+  
+  if [ "$status" = "running" ]; then
+    echo "Container is running"
+    exit 0
+  fi
+  
+  echo "Waiting for container to start... (attempt $i/12)"
+  sleep 5
+done
+
+echo "Timeout waiting for container to start"
+exit 1 
